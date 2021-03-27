@@ -1,44 +1,50 @@
 pipeline{
     agent any
     tools {
-      maven 'maven3'
+      maven 'M2_HOME'
     }
-    environment {
-      DOCKER_TAG = getVersion()
-    }
+    // environment {
+    //   DOCKER_TAG = getVersion()
+    // }
     stages{
+        stage('Clean Workspace'){
+            steps{
+              cleanWs()   
+            }
+        }
         stage('SCM'){
             steps{
-                git credentialsId: 'github', 
-                    url: 'https://github.com/javahometech/dockeransiblejenkins'
+                git branch: 'main', url: 'https://github.com/arikbidny/java-devops-ansible-docker.git'
+                // git 'https://github.com/arikbidny/java-devops-ansible-docker.git'
             }
         }
-        
         stage('Maven Build'){
             steps{
-                sh "mvn clean package"
+                sh "mvn clean install"
             }
         }
-        
         stage('Docker Build'){
             steps{
-                sh "docker build . -t kammana/hariapp:${DOCKER_TAG} "
+                script{
+                    DOCKER_TAG = getVersion()
+                }
+                sh "docker build . -t arikbi/javaansibledocker:$DOCKER_TAG"
             }
         }
-        
         stage('DockerHub Push'){
             steps{
-                withCredentials([string(credentialsId: 'docker-hub', variable: 'dockerHubPwd')]) {
-                    sh "docker login -u kammana -p ${dockerHubPwd}"
+                script{
+                    DOCKER_TAG = getVersion()
                 }
-                
-                sh "docker push kammana/hariapp:${DOCKER_TAG} "
+                withCredentials([string(credentialsId: 'docker-hub-arikbi', variable: 'dockerHubPwd')]) {
+                    sh "docker login -u arikbi -p ${dockerHubPwd}"
+                }
+                sh "docker push arikbi/javaansibledocker:$DOCKER_TAG"
             }
         }
-        
         stage('Docker Deploy'){
             steps{
-              ansiblePlaybook credentialsId: 'dev-server', disableHostKeyChecking: true, extras: "-e DOCKER_TAG=${DOCKER_TAG}", installation: 'ansible', inventory: 'dev.inv', playbook: 'deploy-docker.yml'
+              ansiblePlaybook credentialsId: 'docker-server', disableHostKeyChecking: true, extras: "-e DOCKER_TAG=${DOCKER_TAG}", installation: 'Ansible', inventory: 'dev.inv', playbook: 'deploy-docker.yml'
             }
         }
     }
