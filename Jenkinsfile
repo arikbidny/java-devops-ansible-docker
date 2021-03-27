@@ -44,6 +44,7 @@ pipeline{
         }
         stage('Docker Deploy'){
             steps{
+            // Final URL: http://18.185.64.135:8085/dockeransible/
               ansiblePlaybook credentialsId: 'docker-server', disableHostKeyChecking: true, extras: "-e DOCKER_TAG=${DOCKER_TAG}", installation: 'Ansible', inventory: 'dev.inv', playbook: 'deploy-docker.yml'
             }
         }
